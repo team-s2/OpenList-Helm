@@ -1,0 +1,22 @@
+{{- if and .Values.storage.enabled (not .Values.storage.existingClaim) -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "openlist.storageClaimName" . }}
+  namespace: {{ include "openlist.namespace" . }}
+  labels:
+    {{- include "openlist.labels" . | nindent 4 }}
+spec:
+  accessModes:
+  - {{ .Values.storage.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.storage.size | quote }}
+  {{- if .Values.storage.storageClass }}
+  {{- if (eq "-" .Values.storage.storageClass) }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: "{{ .Values.storage.storageClass }}"
+  {{- end }}
+  {{- end }}
+{{- end }}

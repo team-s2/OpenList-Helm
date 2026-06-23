@@ -2,10 +2,9 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ template "openlist.fullname" . }}
+  namespace: {{ include "openlist.namespace" . }}
   labels:
-    app: {{ template "openlist.name" . }}
-    chart: {{ template "openlist.chart" . }}
-    release: {{ .Release.Name }}
+    {{- include "openlist.labels" . | nindent 4 }}
 spec:
   accessModes:
   - {{ .Values.persistence.accessMode | quote }}

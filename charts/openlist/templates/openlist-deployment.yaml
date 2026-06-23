@@ -2,39 +2,73 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: {{ template "openlist.name" . }}
-    chart: {{ template "openlist.chart" . }}
-    release: {{ .Release.Name }}
+    {{- include "openlist.labels" . | nindent 4 }}
   name: {{ template "openlist.fullname" . }}
+  namespace: {{ include "openlist.namespace" . }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    {{- toYaml .Values.updateStrategy | nindent 4 }}
   selector:
     matchLabels:
-      app: {{ template "openlist.name" . }}
-      release: {{ .Release.Name }}
+      {{- include "openlist.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
-        app: {{ template "openlist.name" . }}
-        release: {{ .Release.Name }}
+        {{- include "openlist.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       containers:
       - env:
         - name: TZ
-          value: UTC
+          value: {{ .Values.timezone | quote }}
         - name: UMASK
-          value: "022"
+          value: {{ .Values.umask | quote }}
+        {{- if or .Values.admin.password .Values.admin.existingSecret }}
+        - name: OPENLIST_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "openlist.adminSecretName" . }}
+              key: OPENLIST_ADMIN_PASSWORD
+        {{- end }}
+        {{- with .Values.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         name: {{ .Chart.Name }}
         image: "{{ .Values.image.registry}}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.service.http.port }}
           protocol: TCP
+        {{- if .Values.service.https.enabled }}
         - containerPort: {{ .Values.service.https.port }}
           protocol: TCP
+        {{- end }}
+        {{- with .Values.livenessProbe }}
+        livenessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.readinessProbe }}
+        readinessProbe:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.resources }}
+        resources:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         volumeMounts:
         - mountPath: /opt/openlist/data
           name: openlist-data
+        {{- if .Values.storage.enabled }}
+        - mountPath: {{ .Values.storage.mountPath | quote }}
+          name: openlist-storage
+        {{- end }}
       restartPolicy: Always
       enableServiceLinks: false
       securityContext:
@@ -43,3 +77,20 @@ spec:
       - name: openlist-data
         persistentVolumeClaim:
           claimName: {{ template "openlist.fullname" . }}
+      {{- if .Values.storage.enabled }}
+      - name: openlist-storage
+        persistentVolumeClaim:
+          claimName: {{ include "openlist.storageClaimName" . }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

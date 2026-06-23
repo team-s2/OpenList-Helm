@@ -2,27 +2,76 @@ nameOverride: ""
 
 fullnameOverride: ""
 
+namespaceOverride: ""
+
 image:
   registry: docker.io
-  repository:  openlistteam/openlist
-  tag: v4.1.6
+  repository: openlistteam/openlist
+  tag: v4.2.2
   pullPolicy: IfNotPresent
 
 replicaCount: 1
+
+# Use Recreate with ReadWriteOnce volumes. RollingUpdate requires ReadWriteMany
+# volumes or another storage backend that can be mounted by old and new pods at
+# the same time.
+updateStrategy:
+  type: Recreate
+
+admin:
+  password: ""
+  # existingSecret must contain a key named OPENLIST_ADMIN_PASSWORD.
+  existingSecret: ""
+
+timezone: UTC
+umask: "022"
+
+podAnnotations: {}
+podLabels: {}
+
+extraEnv: []
+
+resources: {}
+
+livenessProbe: {}
+readinessProbe: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
 
 persistence:
   storageClass: ""
   accessMode: ReadWriteOnce
   size: 5Gi
 
+storage:
+  enabled: false
+  mountPath: /storage
+  existingClaim: ""
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 100Gi
+
 service:
   type: ClusterIP
+  annotations: {}
+  labels: {}
   loadBalancerIP: ~
   http:
     port: 5244
     targetPort: 5244
     nodePort: 35244
   https:
+    enabled: true
     port: 5245
     targetPort: 5245
     nodePort: 35245
+
+httpRoute:
+  enabled: false
+  annotations: {}
+  labels: {}
+  parentRefs: []
+  hostnames: []
+  rules: []
